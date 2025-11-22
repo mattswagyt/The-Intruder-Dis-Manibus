@@ -1,0 +1,399 @@
+-- The Intruder - Dis Manibus (By BMF)
+
+-- Variables / Services
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui")
+local UIS = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = workspace
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Create UI Elements (same layout as your House script)
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local LocationLabel = Instance.new("TextLabel")
+local ErrorLog = Instance.new("TextLabel")
+local UIListLayout = Instance.new("UIListLayout")
+
+-- UI Properties (unchanged layout)
+ScreenGui.Parent = PlayerGui
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Name = "IntruderUI_DisManibus"
+
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Size = UDim2.new(0, 300, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = true
+
+Title.Parent = MainFrame
+Title.Text = "The Intruder - Dis Manibus (By BMF)"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 18
+
+LocationLabel.Parent = MainFrame
+LocationLabel.Text = "Location: Loading..."
+LocationLabel.Size = UDim2.new(1, 0, 0, 30)
+LocationLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+LocationLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+LocationLabel.Font = Enum.Font.SourceSans
+LocationLabel.TextSize = 16
+
+ErrorLog.Parent = MainFrame
+ErrorLog.Text = "Error Log: None"
+ErrorLog.Size = UDim2.new(1, 0, 0, 30)
+ErrorLog.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+ErrorLog.TextColor3 = Color3.fromRGB(255, 85, 85)
+ErrorLog.Font = Enum.Font.SourceSans
+ErrorLog.TextSize = 14
+ErrorLog.TextWrapped = true
+ErrorLog.TextYAlignment = Enum.TextYAlignment.Top
+
+UIListLayout.Parent = MainFrame
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Toggle UI with Delete key (same behavior)
+UIS.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.Delete then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+-- simple safe wrapper to write errors to ErrorLog
+local function safeDo(fn)
+    local ok, err = pcall(fn)
+    if not ok then
+        ErrorLog.Text = "Error Log: " .. tostring(err)
+        warn("[DisManibusUI] Error:", err)
+    else
+        ErrorLog.Text = "Error Log: None"
+    end
+    return ok, err
+end
+
+-- Function to create buttons (same as before)
+local function createButton(name, callback)
+    local Button = Instance.new("TextButton")
+    Button.Parent = MainFrame
+    Button.Text = name
+    Button.Size = UDim2.new(1, 0, 0, 30)
+    Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.Font = Enum.Font.SourceSans
+    Button.TextSize = 16
+    Button.MouseButton1Click:Connect(function()
+        pcall(callback)
+    end)
+    return Button
+end
+
+-- Track location (attempt to read some workspace value for location; mirror house script)
+spawn(function()
+    while true do
+        local ok, result = pcall(function()
+            -- attempt to replicate your old pattern: workspace.Values.intruderPos.Value
+            if Workspace:FindFirstChild("Values") and Workspace.Values:FindFirstChild("intruderPos") then
+                return Workspace.Values.intruderPos.Value
+            else
+                error("workspace.Values.intruderPos missing")
+            end
+        end)
+
+        if ok then
+            LocationLabel.Text = "Location: " .. tostring(result)
+        else
+            LocationLabel.Text = "Location: Error"
+            ErrorLog.Text = "Error Log: Failed to fetch intruder location."
+        end
+        wait(1)
+    end
+end)
+
+-- Helper: get current character & root part
+local function getCharacter()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChildWhichIsA("BasePart")
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    return char, hrp, humanoid
+end
+
+local function teleportToVector3(vec3)
+    local char, hrp = getCharacter()
+    if not char or not hrp then
+        error("Character or root part not found")
+    end
+    hrp.CFrame = CFrame.new(vec3)
+end
+
+-- Buttons requested (Infinite Yield, Dex Explorer, Full Bright, Unlock Camera)
+createButton("Infinite Yield", function()
+    local success, result = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+    end)
+    if success then
+        print("Infinite Yield executed!")
+    else
+        warn("Infinite Yield failed:", result)
+    end
+end)
+
+createButton("Dex Explorer", function()
+    local success, result = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))()
+    end)
+    if success then
+        print("Dex Explorer executed!")
+    else
+        warn("Dex Explorer failed:", result)
+    end
+end)
+
+createButton("Full Bright", function()
+    safeDo(function()
+        Lighting.Brightness = 5
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+        print("Full Bright activated!")
+    end)
+end)
+
+createButton("Unlock Camera", function()
+    safeDo(function()
+        local p = LocalPlayer
+        p.CameraMode = Enum.CameraMode.Classic
+        p.CameraMinZoomDistance = 0
+        p.CameraMaxZoomDistance = 50
+        print("Camera unlocked! Third/first-person available.")
+    end)
+end)
+
+-- Teleport buttons
+createButton("Skip Long Aah Stairs", function()
+    safeDo(function() teleportToVector3(Vector3.new(-63, 7, -46)) print("Teleported: Skip Long Aah Stairs") end)
+end)
+createButton("Main Room", function()
+    safeDo(function() teleportToVector3(Vector3.new(174, 4, 12)) print("Teleported: Main Room") end)
+end)
+createButton("Vent Room", function()
+    safeDo(function() teleportToVector3(Vector3.new(179, 4, -17)) print("Teleported: Vent Room") end)
+end)
+createButton("Room 1", function()
+    safeDo(function() teleportToVector3(Vector3.new(196, 4, -71)) print("Teleported: Room 1") end)
+end)
+createButton("Room 2", function()
+    safeDo(function() teleportToVector3(Vector3.new(102, 75, -72)) print("Teleported: Room 2") end)
+end)
+createButton("Interact (Hospital)", function()
+    safeDo(function() teleportToVector3(Vector3.new(210, 4, -123)) print("Teleported: Interact (Hospital)") end)
+end)
+createButton("Elevator (Hospital)", function()
+    safeDo(function() teleportToVector3(Vector3.new(97, 4, -110)) print("Teleported: Elevator (Hospital)") end)
+end)
+
+-- GOD MODE (toggle)
+local godModeEnabled = false
+local godLoopThread = nil
+
+local function safeDestroy(instance)
+    pcall(function()
+        if instance and instance.Parent then
+            instance:Destroy()
+        end
+    end)
+end
+
+local function destroyIfExists(pathGetter)
+    pcall(function()
+        local obj = pathGetter()
+        if obj then
+            obj:Destroy()
+        end
+    end)
+end
+
+local function performGodDestruction()
+    -- 1) Destroy workspace.WHITEBOXOFSHAME
+    safeDestroy(Workspace:FindFirstChild("WHITEBOXOFSHAME"))
+
+    -- 2) Destroy player's workspace.<PlayerName>.Health  (option A)
+    pcall(function()
+        local playerName = LocalPlayer.Name
+        local playerInWorkspace = Workspace:FindFirstChild(playerName)
+        if playerInWorkspace then
+            local healthVal = playerInWorkspace:FindFirstChild("Health")
+            if healthVal then
+                healthVal:Destroy()
+                print("Destroyed", playerName .. ".Health in workspace")
+            end
+        end
+    end)
+
+    -- 3) Destroy player.isDead (BoolValue under player)
+    pcall(function()
+        local isDead = LocalPlayer:FindFirstChild("isDead")
+        if isDead then
+            isDead:Destroy()
+            print("Destroyed LocalPlayer.isDead")
+        end
+    end)
+
+    -- 4) Destroy workspace.Sounds.Damage and voices.HenryHurt if exist
+    safeDestroy((Workspace:FindFirstChild("Sounds") and Workspace.Sounds:FindFirstChild("Damage")) or nil)
+    if Workspace:FindFirstChild("Sounds") and Workspace.Sounds:FindFirstChild("voices") then
+        safeDestroy(Workspace.Sounds.voices:FindFirstChild("HenryHurt"))
+    end
+
+    -- 5) Destroy ReplicatedStorage events:
+    local eventsRoot = ReplicatedStorage:FindFirstChild("Events")
+    if eventsRoot then
+        for _, name in ipairs({"Die", "ouch", "takeDamage", "taken", "thingKill", "hasPlrDied", "Scare"}) do
+            local ev = eventsRoot:FindFirstChild(name)
+            safeDestroy(ev)
+        end
+    end
+
+    -- 6) Hide player's Health GUI (PlayerGui.Health.Frame and Heart)
+    pcall(function()
+        local healthGui = LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("Health")
+        if healthGui then
+            local frame = healthGui:FindFirstChild("Frame")
+            if frame and frame:IsA("GuiObject") then
+                frame.Visible = false
+            end
+            local heart = healthGui:FindFirstChild("Heart")
+            if heart and heart:IsA("GuiObject") then
+                heart.Visible = false
+                -- Many GUI objects don't have .Active, but set if exists:
+                if heart:GetAttribute and heart:GetAttribute("Active") ~= nil then
+                    -- noop, attribute example; we prefer direct property if exists:
+                end
+                pcall(function() heart.Active = false end)
+            end
+        end
+    end)
+
+    -- 7) Destroy workspace.Sounds.voices.HenryHurt done above; also try workspace.Sounds.voices and specific voice nodes
+    if Workspace:FindFirstChild("Sounds") and Workspace.Sounds:FindFirstChild("voices") then
+        for _, child in ipairs(Workspace.Sounds.voices:GetChildren()) do
+            if child.Name:lower():find("henryhurt") or child.Name:lower():find("hurt") then
+                safeDestroy(child)
+            end
+        end
+    end
+
+    -- 8) Additional sound / event removals attempted above (Damage, voices, ReplicatedStorage Events)
+
+    -- 9) Remove Floor 1 Triggers (delete all children named "Trigger" under Stairwell)
+    pcall(function()
+        local stair = Workspace:FindFirstChild("Stairwell")
+        if stair then
+            for _, c in ipairs(stair:GetChildren()) do
+                if c.Name == "Trigger" then
+                    safeDestroy(c)
+                    print("Destroyed Stairwell Trigger:", c:GetFullName())
+                end
+            end
+            -- try specific index removal: stair:GetChildren()[25]
+            local children = stair:GetChildren()
+            if children[25] then safeDestroy(children[25]) end
+        end
+    end)
+
+    -- 10) Remove Floor 2 Triggers (delete all Trigger children under Floor2)
+    pcall(function()
+        local floor2 = Workspace:FindFirstChild("Floor2")
+        if floor2 then
+            for _, c in ipairs(floor2:GetChildren()) do
+                if c.Name == "Trigger" then
+                    safeDestroy(c)
+                    print("Destroyed Floor2 Trigger:", c:GetFullName())
+                end
+            end
+            -- try index-based deletions too if exist
+            local kids = floor2:GetChildren()
+            if kids[33] then safeDestroy(kids[33]) end
+            if kids[32] then safeDestroy(kids[32]) end
+        end
+    end)
+
+    -- 11) Bypass Jason: Destroy listed Jason objects & camera scare & sounds
+    safeDestroy((Workspace:FindFirstChild("Mansion") and Workspace.Mansion:FindFirstChild("JasonTall3")) or nil)
+    safeDestroy(Workspace:FindFirstChild("CameraPos") and Workspace.CameraPos:FindFirstChild("JasonScare") or nil)
+    safeDestroy(Workspace:FindFirstChild("Sounds") and Workspace.Sounds:FindFirstChild("JasonScream") or nil)
+
+    -- Try to destroy JasonCry under JasonTall3.Head if present
+    pcall(function()
+        local j = Workspace:FindFirstChild("Mansion") and Workspace.Mansion:FindFirstChild("JasonTall3")
+        if j and j:FindFirstChild("Head") then
+            local cry = j.Head:FindFirstChild("JasonCry")
+            if cry then cry:Destroy() end
+        end
+    end)
+
+    -- 12) Extra attempt to remove ReplicatedStorage.Events.Scare done above
+
+    -- 13) Destroy workspace.Sounds.Damage (done above) and workspace.Sounds.voices.HenryHurt
+    -- Already attempted earlier
+
+    -- 14) game:GetService("ReplicatedStorage").Events.takeDamage etc destroyed above
+
+    -- Final: logs
+    print("[GodMode] Destruction cycle complete.")
+end
+
+createButton("God Mode", function()
+    godModeEnabled = not godModeEnabled
+    if godModeEnabled then
+        print("God Mode: ENABLED (destructive loop started).")
+        godLoopThread = task.spawn(function()
+            while godModeEnabled do
+                performGodDestruction()
+                task.wait(0.35) -- repeat often to prevent respawns
+            end
+        end)
+    else
+        print("God Mode: DISABLED (destructive loop stopped).")
+        -- loop stops naturally since godModeEnabled is false
+    end
+end)
+
+-- Additional one-shot operations for some paths (safe attempts)
+createButton("Cleanup One-shot", function()
+    safeDo(function()
+        -- Destroy specific paths explicitly (attempt again)
+        safeDestroy(Workspace:FindFirstChild("WHITEBOXOFSHAME"))
+        safeDestroy(Workspace:FindFirstChild("Sounds") and Workspace.Sounds:FindFirstChild("Damage") or nil)
+        safeDestroy(Workspace:FindFirstChild("Sounds") and Workspace.Sounds.voices and Workspace.Sounds.voices:FindFirstChild("HenryHurt") or nil)
+
+        if ReplicatedStorage:FindFirstChild("Events") then
+            for _, name in ipairs({"Die", "ouch", "takeDamage", "taken", "thingKill", "hasPlrDied", "Scare"}) do
+                safeDestroy(ReplicatedStorage.Events:FindFirstChild(name))
+            end
+        end
+
+        -- hide health HUD again (one-shot)
+        local healthGui = LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("Health")
+        if healthGui then
+            local frame = healthGui:FindFirstChild("Frame")
+            if frame and frame:IsA("GuiObject") then frame.Visible = false end
+            local heart = healthGui:FindFirstChild("Heart")
+            if heart and heart:IsA("GuiObject") then heart.Visible = false pcall(function() heart.Active = false end) end
+        end
+
+        print("One-shot cleanup attempted.")
+    end)
+end)
+
+-- Final Touch
+print("✅ The Intruder - Dis Manibus (By BMF) Script Loaded Successfully")
