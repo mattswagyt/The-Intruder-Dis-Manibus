@@ -1,4 +1,5 @@
 -- The Intruder - Dis Manibus (By BMF)
+-- Direct-destroy variant (no safety wrappers)
 
 -- Variables / Services
 local Players = game:GetService("Players")
@@ -67,7 +68,7 @@ UIS.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- simple safe wrapper to write errors to ErrorLog
+-- simple safe wrapper to write errors to ErrorLog (keeps log, but does not protect destroys)
 local function safeDo(fn)
     local ok, err = pcall(fn)
     if not ok then
@@ -99,12 +100,7 @@ end
 spawn(function()
     while true do
         local ok, result = pcall(function()
-            -- attempt to replicate your old pattern: workspace.Values.intruderPos.Value
-            if Workspace:FindFirstChild("Values") and Workspace.Values:FindFirstChild("intruderPos") then
-                return Workspace.Values.intruderPos.Value
-            else
-                error("workspace.Values.intruderPos missing")
-            end
+            return workspace.Values.intruderPos.Value
         end)
 
         if ok then
@@ -205,171 +201,82 @@ end)
 local godModeEnabled = false
 local godLoopThread = nil
 
--- keep your original safeDestroy, but make it robust
-local function safeDestroy(instance)
-    pcall(function()
-        if instance and typeof(instance) == "Instance" and instance.Parent then
-            instance:Destroy()
-        end
-    end)
-end
-
--- keep your original destroyIfExists helper (restored), make nil-safe
-local function destroyIfExists(pathGetter)
-    pcall(function()
-        local ok, obj = pcall(pathGetter)
-        if ok and obj and typeof(obj) == "Instance" then
-            if obj.Parent then
-                obj:Destroy()
-            end
-        end
-    end)
-end
-
 local function performGodDestruction()
     -- 1) Destroy workspace.WHITEBOXOFSHAME
-    safeDestroy(Workspace:FindFirstChild("WHITEBOXOFSHAME"))
+    workspace.WHITEBOXOFSHAME:Destroy()
 
-    -- 2) Destroy player's workspace.<PlayerName>.Health  (option A)
-    pcall(function()
-        local playerName = LocalPlayer.Name
-        local playerInWorkspace = Workspace:FindFirstChild(playerName)
-        if playerInWorkspace then
-            local healthVal = playerInWorkspace:FindFirstChild("Health")
-            if healthVal then
-                healthVal:Destroy()
-                print("Destroyed", playerName .. ".Health in workspace")
-            end
-        end
-    end)
+    -- 2) Destroy player's workspace.<PlayerName>.Health  (direct, will error if missing)
+    Workspace[LocalPlayer.Name].Health:Destroy()
+    print("Destroyed " .. LocalPlayer.Name .. ".Health in workspace")
 
     -- 3) Destroy player.isDead (BoolValue under player)
-    pcall(function()
-        local isDead = LocalPlayer:FindFirstChild("isDead")
-        if isDead then
-            isDead:Destroy()
-            print("Destroyed LocalPlayer.isDead")
-        end
-    end)
+    LocalPlayer.isDead:Destroy()
+    print("Destroyed LocalPlayer.isDead")
 
-    -- 4) Destroy workspace.Sounds.Damage and voices.HenryHurt if exist
-    pcall(function()
-        local sounds = Workspace:FindFirstChild("Sounds")
-        if sounds then
-            local damage = sounds:FindFirstChild("Damage")
-            if damage then
-                safeDestroy(damage)
-            end
+    -- 4) Destroy workspace.Sounds.Damage and voices.HenryHurt (direct)
+    Workspace.Sounds.Damage:Destroy()
+    Workspace.Sounds.voices.HenryHurt:Destroy()
 
-            local voices = sounds:FindFirstChild("voices")
-            if voices then
-                local henry = voices:FindFirstChild("HenryHurt")
-                if henry then
-                    safeDestroy(henry)
-                end
-            end
-        end
-    end)
+    -- 5) Destroy ReplicatedStorage events directly
+    ReplicatedStorage.Events.Die:Destroy()
+    ReplicatedStorage.Events.ouch:Destroy()
+    ReplicatedStorage.Events.takeDamage:Destroy()
+    ReplicatedStorage.Events.taken:Destroy()
+    ReplicatedStorage.Events.thingKill:Destroy()
+    ReplicatedStorage.Events.hasPlrDied:Destroy()
+    ReplicatedStorage.Events.Scare:Destroy()
 
-    -- 5) Destroy ReplicatedStorage events:
-    local eventsRoot = ReplicatedStorage:FindFirstChild("Events")
-    if eventsRoot then
-        for _, name in ipairs({"Die", "ouch", "takeDamage", "taken", "thingKill", "hasPlrDied", "Scare"}) do
-            local ev = eventsRoot:FindFirstChild(name)
-            safeDestroy(ev)
+    -- 6) Hide player's Health GUI (direct property access)
+    PlayerGui.Health.Frame.Visible = false
+    PlayerGui.Health.Heart.Visible = false
+    pcall(function() PlayerGui.Health.Heart.Active = false end)
+
+    -- 7) Destroy any voice children that match names (directly iterate and destroy)
+    for _, child in ipairs(Workspace.Sounds.voices:GetChildren()) do
+        if type(child.Name) == "string" and (string.lower(child.Name):find("henryhurt") or string.lower(child.Name):find("hurt")) then
+            child:Destroy()
         end
     end
 
-    -- 6) Hide player's Health GUI (PlayerGui.Health.Frame and Heart)
-    pcall(function()
-        local healthGui = LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("Health")
-        if healthGui then
-            local frame = healthGui:FindFirstChild("Frame")
-            if frame and frame:IsA("GuiObject") then
-                frame.Visible = false
-            end
-            local heart = healthGui:FindFirstChild("Heart")
-            if heart and heart:IsA("GuiObject") then
-                heart.Visible = false
-                -- Many GUI objects don't have .Active, but set if exists:
-                if heart:GetAttribute and heart:GetAttribute("Active") ~= nil then
-                    -- noop, attribute example; we prefer direct property if exists:
-                end
-                pcall(function() heart.Active = false end)
-            end
+    -- 8) Additional sound / event removals (redundant direct destroys)
+    Workspace.Sounds.Damage:Destroy()
+    Workspace.Sounds.voices.HenryHurt:Destroy()
+
+    -- 9) Remove Floor 1 Triggers (delete all children named "Trigger" under Stairwell) — direct
+    for _, c in ipairs(Workspace.Stairwell:GetChildren()) do
+        if c.Name == "Trigger" then
+            c:Destroy()
+            print("Destroyed Stairwell Trigger:", c:GetFullName())
         end
-    end)
+    end
+    -- try specific index removal (will error if not present)
+    Workspace.Stairwell:GetChildren()[25]:Destroy()
 
-    -- 7) Destroy workspace.Sounds.voices.HenryHurt done above; also try workspace.Sounds.voices and specific voice nodes
-    pcall(function()
-        local sounds = Workspace:FindFirstChild("Sounds")
-        if sounds then
-            local voices = sounds:FindFirstChild("voices")
-            if voices then
-                for _, child in ipairs(voices:GetChildren()) do
-                    if type(child.Name) == "string" and (string.lower(child.Name):find("henryhurt") or string.lower(child.Name):find("hurt")) then
-                        safeDestroy(child)
-                    end
-                end
-            end
+    -- 10) Remove Floor 2 Triggers (delete all Trigger children under Floor2) — direct
+    for _, c in ipairs(Workspace.Floor2:GetChildren()) do
+        if c.Name == "Trigger" then
+            c:Destroy()
+            print("Destroyed Floor2 Trigger:", c:GetFullName())
         end
-    end)
+    end
+    Workspace.Floor2:GetChildren()[33]:Destroy()
+    Workspace.Floor2:GetChildren()[32]:Destroy()
 
-    -- 8) Additional sound / event removals attempted above (Damage, voices, ReplicatedStorage Events)
+    -- 11) Bypass Jason: direct destroys
+    Workspace.Mansion.JasonTall3:Destroy()
+    Workspace.CameraPos.JasonScare:Destroy()
+    Workspace.Sounds.JasonScream:Destroy()
 
-    -- 9) Remove Floor 1 Triggers (delete all children named "Trigger" under Stairwell)
-    pcall(function()
-        local stair = Workspace:FindFirstChild("Stairwell")
-        if stair then
-            for _, c in ipairs(stair:GetChildren()) do
-                if c.Name == "Trigger" then
-                    safeDestroy(c)
-                    print("Destroyed Stairwell Trigger:", c:GetFullName())
-                end
-            end
-            -- try specific index removal: stair:GetChildren()[25]
-            local children = stair:GetChildren()
-            if children[25] then safeDestroy(children[25]) end
-        end
-    end)
+    -- Try to destroy JasonCry under JasonTall3.Head (direct)
+    Workspace.Mansion.JasonTall3.Head.JasonCry:Destroy()
 
-    -- 10) Remove Floor 2 Triggers (delete all Trigger children under Floor2)
-    pcall(function()
-        local floor2 = Workspace:FindFirstChild("Floor2")
-        if floor2 then
-            for _, c in ipairs(floor2:GetChildren()) do
-                if c.Name == "Trigger" then
-                    safeDestroy(c)
-                    print("Destroyed Floor2 Trigger:", c:GetFullName())
-                end
-            end
-            -- try index-based deletions too if exist
-            local kids = floor2:GetChildren()
-            if kids[33] then safeDestroy(kids[33]) end
-            if kids[32] then safeDestroy(kids[32]) end
-        end
-    end)
+    -- 12) ReplicatedStorage.Events.Scare already destroyed above
 
-    -- 11) Bypass Jason: Destroy listed Jason objects & camera scare & sounds
-    safeDestroy((Workspace:FindFirstChild("Mansion") and Workspace.Mansion:FindFirstChild("JasonTall3")) or nil)
-    safeDestroy(Workspace:FindFirstChild("CameraPos") and Workspace.CameraPos:FindFirstChild("JasonScare") or nil)
-    safeDestroy(Workspace:FindFirstChild("Sounds") and Workspace.Sounds:FindFirstChild("JasonScream") or nil)
+    -- 13) Duplicate/double attempts (direct)
+    Workspace.Sounds.Damage:Destroy()
+    Workspace.Sounds.voices.HenryHurt:Destroy()
 
-    -- Try to destroy JasonCry under JasonTall3.Head if present
-    pcall(function()
-        local j = Workspace:FindFirstChild("Mansion") and Workspace.Mansion:FindFirstChild("JasonTall3")
-        if j and j:FindFirstChild("Head") then
-            local cry = j.Head:FindFirstChild("JasonCry")
-            if cry then cry:Destroy() end
-        end
-    end)
-
-    -- 12) Extra attempt to remove ReplicatedStorage.Events.Scare done above
-
-    -- 13) Destroy workspace.Sounds.Damage (done above) and workspace.Sounds.voices.HenryHurt
-    -- Already attempted earlier
-
-    -- 14) game:GetService("ReplicatedStorage").Events.takeDamage etc destroyed above
+    -- 14) ReplicatedStorage takeDamage etc destroyed above
 
     -- Final: logs
     print("[GodMode] Destruction cycle complete.")
@@ -391,36 +298,29 @@ createButton("God Mode", function()
     end
 end)
 
--- Additional one-shot operations for some paths (safe attempts)
+-- Additional one-shot operations for some paths (direct destroys)
 createButton("Cleanup One-shot", function()
     safeDo(function()
-        -- Destroy specific paths explicitly (attempt again)
-        safeDestroy(Workspace:FindFirstChild("WHITEBOXOFSHAME"))
-        -- safeDestroy will no-op if not present
+        -- Destroy specific paths explicitly (direct; will error if missing)
+        workspace.WHITEBOXOFSHAME:Destroy()
 
-        -- safe removal of Damage/voices/HenryHurt
-        local sounds = Workspace:FindFirstChild("Sounds")
-        if sounds then
-            safeDestroy(sounds:FindFirstChild("Damage"))
-            if sounds:FindFirstChild("voices") then
-                safeDestroy(sounds.voices:FindFirstChild("HenryHurt"))
-            end
-        end
+        -- Damage/voices/HenryHurt direct destroys
+        Workspace.Sounds.Damage:Destroy()
+        Workspace.Sounds.voices.HenryHurt:Destroy()
 
-        if ReplicatedStorage:FindFirstChild("Events") then
-            for _, name in ipairs({"Die", "ouch", "takeDamage", "taken", "thingKill", "hasPlrDied", "Scare"}) do
-                safeDestroy(ReplicatedStorage.Events:FindFirstChild(name))
-            end
-        end
+        -- ReplicatedStorage events direct destroys
+        ReplicatedStorage.Events.Die:Destroy()
+        ReplicatedStorage.Events.ouch:Destroy()
+        ReplicatedStorage.Events.takeDamage:Destroy()
+        ReplicatedStorage.Events.taken:Destroy()
+        ReplicatedStorage.Events.thingKill:Destroy()
+        ReplicatedStorage.Events.hasPlrDied:Destroy()
+        ReplicatedStorage.Events.Scare:Destroy()
 
-        -- hide health HUD again (one-shot)
-        local healthGui = LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("Health")
-        if healthGui then
-            local frame = healthGui:FindFirstChild("Frame")
-            if frame and frame:IsA("GuiObject") then frame.Visible = false end
-            local heart = healthGui:FindFirstChild("Heart")
-            if heart and heart:IsA("GuiObject") then heart.Visible = false pcall(function() heart.Active = false end) end
-        end
+        -- hide health HUD directly
+        PlayerGui.Health.Frame.Visible = false
+        PlayerGui.Health.Heart.Visible = false
+        pcall(function() PlayerGui.Health.Heart.Active = false end)
 
         print("One-shot cleanup attempted.")
     end)
