@@ -96,7 +96,7 @@ local function createButton(name, callback)
     return Button
 end
 
--- Track location (attempt to read some workspace value for location; mirror house script)
+-- Track location loop
 spawn(function()
     while true do
         local ok, result = pcall(function()
@@ -130,27 +130,14 @@ local function teleportToVector3(vec3)
     hrp.CFrame = CFrame.new(vec3)
 end
 
--- Buttons requested (Infinite Yield, Dex Explorer, Full Bright, Unlock Camera)
+-- BUTTONS (same order as before)
+
 createButton("Infinite Yield", function()
-    local success, result = pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
-    end)
-    if success then
-        print("Infinite Yield executed!")
-    else
-        warn("Infinite Yield failed:", result)
-    end
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
 end)
 
 createButton("Dex Explorer", function()
-    local success, result = pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))()
-    end)
-    if success then
-        print("Dex Explorer executed!")
-    else
-        warn("Dex Explorer failed:", result)
-    end
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))()
 end)
 
 createButton("Full Bright", function()
@@ -160,171 +147,92 @@ createButton("Full Bright", function()
         Lighting.FogEnd = 100000
         Lighting.GlobalShadows = false
         Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
-        print("Full Bright activated!")
     end)
 end)
 
 createButton("Unlock Camera", function()
     safeDo(function()
-        local p = LocalPlayer
-        p.CameraMode = Enum.CameraMode.Classic
-        p.CameraMinZoomDistance = 0
-        p.CameraMaxZoomDistance = 50
-        print("Camera unlocked! Third/first-person available.")
+        LocalPlayer.CameraMode = Enum.CameraMode.Classic
+        LocalPlayer.CameraMinZoomDistance = 0
+        LocalPlayer.CameraMaxZoomDistance = 50
     end)
 end)
 
 -- Teleport buttons
-createButton("Skip Long Aah Stairs", function()
-    safeDo(function() teleportToVector3(Vector3.new(-63, 7, -46)) print("Teleported: Skip Long Aah Stairs") end)
-end)
-createButton("Main Room", function()
-    safeDo(function() teleportToVector3(Vector3.new(174, 4, 12)) print("Teleported: Main Room") end)
-end)
-createButton("Vent Room", function()
-    safeDo(function() teleportToVector3(Vector3.new(179, 4, -17)) print("Teleported: Vent Room") end)
-end)
-createButton("Room 1", function()
-    safeDo(function() teleportToVector3(Vector3.new(196, 4, -71)) print("Teleported: Room 1") end)
-end)
-createButton("Room 2", function()
-    safeDo(function() teleportToVector3(Vector3.new(102, 75, -72)) print("Teleported: Room 2") end)
-end)
-createButton("Interact (Hospital)", function()
-    safeDo(function() teleportToVector3(Vector3.new(210, 4, -123)) print("Teleported: Interact (Hospital)") end)
-end)
-createButton("Elevator (Hospital)", function()
-    safeDo(function() teleportToVector3(Vector3.new(97, 4, -110)) print("Teleported: Elevator (Hospital)") end)
-end)
+createButton("Skip Long Aah Stairs", function() teleportToVector3(Vector3.new(-63, 7, -46)) end)
+createButton("Main Room", function() teleportToVector3(Vector3.new(174, 4, 12)) end)
+createButton("Vent Room", function() teleportToVector3(Vector3.new(179, 4, -17)) end)
+createButton("Room 1", function() teleportToVector3(Vector3.new(196, 4, -71)) end)
+createButton("Room 2", function() teleportToVector3(Vector3.new(102, 75, -72)) end)
+createButton("Interact (Hospital)", function() teleportToVector3(Vector3.new(210, 4, -123)) end)
+createButton("Elevator (Hospital)", function() teleportToVector3(Vector3.new(97, 4, -110)) end)
 
--- GOD MODE (toggle)
+------------------------------------------------------
+-- * UPDATED GOD MODE (ONLY destroys EXACT paths you listed)
+------------------------------------------------------
+
 local godModeEnabled = false
 local godLoopThread = nil
 
 local function performGodDestruction()
-    -- 1) Destroy workspace.WHITEBOXOFSHAME
     workspace.WHITEBOXOFSHAME:Destroy()
+    workspace.Sounds.Damage:Destroy()
+    workspace.Sounds.voices.HenryHurt:Destroy()
 
-    -- 2) Destroy player's workspace.<PlayerName>.Health  (direct, will error if missing)
-    Workspace[LocalPlayer.Name].Health:Destroy()
-    print("Destroyed " .. LocalPlayer.Name .. ".Health in workspace")
-
-    -- 3) Destroy player.isDead (BoolValue under player)
-    LocalPlayer.isDead:Destroy()
-    print("Destroyed LocalPlayer.isDead")
-
-    -- 4) Destroy workspace.Sounds.Damage and voices.HenryHurt (direct)
-    Workspace.Sounds.Damage:Destroy()
-    Workspace.Sounds.voices.HenryHurt:Destroy()
-
-    -- 5) Destroy ReplicatedStorage events directly
     ReplicatedStorage.Events.Die:Destroy()
     ReplicatedStorage.Events.ouch:Destroy()
     ReplicatedStorage.Events.takeDamage:Destroy()
     ReplicatedStorage.Events.taken:Destroy()
     ReplicatedStorage.Events.thingKill:Destroy()
     ReplicatedStorage.Events.hasPlrDied:Destroy()
-    ReplicatedStorage.Events.Scare:Destroy()
 
-    -- 6) Hide player's Health GUI (direct property access)
+    Workspace[LocalPlayer.Name].Health:Destroy()
+    LocalPlayer.isDead:Destroy()
+
+    -- HUD disable
     PlayerGui.Health.Frame.Visible = false
     PlayerGui.Health.Heart.Visible = false
-    pcall(function() PlayerGui.Health.Heart.Active = false end)
-
-    -- 7) Destroy any voice children that match names (directly iterate and destroy)
-    for _, child in ipairs(Workspace.Sounds.voices:GetChildren()) do
-        if type(child.Name) == "string" and (string.lower(child.Name):find("henryhurt") or string.lower(child.Name):find("hurt")) then
-            child:Destroy()
-        end
-    end
-
-    -- 8) Additional sound / event removals (redundant direct destroys)
-    Workspace.Sounds.Damage:Destroy()
-    Workspace.Sounds.voices.HenryHurt:Destroy()
-
-    -- 9) Remove Floor 1 Triggers (delete all children named "Trigger" under Stairwell) — direct
-    for _, c in ipairs(Workspace.Stairwell:GetChildren()) do
-        if c.Name == "Trigger" then
-            c:Destroy()
-            print("Destroyed Stairwell Trigger:", c:GetFullName())
-        end
-    end
-    -- try specific index removal (will error if not present)
-    Workspace.Stairwell:GetChildren()[25]:Destroy()
-
-    -- 10) Remove Floor 2 Triggers (delete all Trigger children under Floor2) — direct
-    for _, c in ipairs(Workspace.Floor2:GetChildren()) do
-        if c.Name == "Trigger" then
-            c:Destroy()
-            print("Destroyed Floor2 Trigger:", c:GetFullName())
-        end
-    end
-    Workspace.Floor2:GetChildren()[33]:Destroy()
-    Workspace.Floor2:GetChildren()[32]:Destroy()
-
-    -- 11) Bypass Jason: direct destroys
-    Workspace.Mansion.JasonTall3:Destroy()
-    Workspace.CameraPos.JasonScare:Destroy()
-    Workspace.Sounds.JasonScream:Destroy()
-
-    -- Try to destroy JasonCry under JasonTall3.Head (direct)
-    Workspace.Mansion.JasonTall3.Head.JasonCry:Destroy()
-
-    -- 12) ReplicatedStorage.Events.Scare already destroyed above
-
-    -- 13) Duplicate/double attempts (direct)
-    Workspace.Sounds.Damage:Destroy()
-    Workspace.Sounds.voices.HenryHurt:Destroy()
-
-    -- 14) ReplicatedStorage takeDamage etc destroyed above
-
-    -- Final: logs
-    print("[GodMode] Destruction cycle complete.")
+    PlayerGui.Health.Heart.Active = false
 end
 
 createButton("God Mode", function()
     godModeEnabled = not godModeEnabled
     if godModeEnabled then
-        print("God Mode: ENABLED (destructive loop started).")
         godLoopThread = task.spawn(function()
             while godModeEnabled do
                 performGodDestruction()
-                task.wait(0.35) -- repeat often to prevent respawns
+                task.wait(0.35)
             end
         end)
-    else
-        print("God Mode: DISABLED (destructive loop stopped).")
-        -- loop stops naturally since godModeEnabled is false
     end
 end)
 
--- Additional one-shot operations for some paths (direct destroys)
-createButton("Cleanup One-shot", function()
-    safeDo(function()
-        -- Destroy specific paths explicitly (direct; will error if missing)
-        workspace.WHITEBOXOFSHAME:Destroy()
+------------------------------------------------------
+-- NEW BUTTONS (in same order)
+------------------------------------------------------
 
-        -- Damage/voices/HenryHurt direct destroys
-        Workspace.Sounds.Damage:Destroy()
-        Workspace.Sounds.voices.HenryHurt:Destroy()
-
-        -- ReplicatedStorage events direct destroys
-        ReplicatedStorage.Events.Die:Destroy()
-        ReplicatedStorage.Events.ouch:Destroy()
-        ReplicatedStorage.Events.takeDamage:Destroy()
-        ReplicatedStorage.Events.taken:Destroy()
-        ReplicatedStorage.Events.thingKill:Destroy()
-        ReplicatedStorage.Events.hasPlrDied:Destroy()
-        ReplicatedStorage.Events.Scare:Destroy()
-
-        -- hide health HUD directly
-        PlayerGui.Health.Frame.Visible = false
-        PlayerGui.Health.Heart.Visible = false
-        pcall(function() PlayerGui.Health.Heart.Active = false end)
-
-        print("One-shot cleanup attempted.")
-    end)
+-- Remove Floor 1 Triggers
+createButton("Remove Floor 1 Triggers", function()
+    workspace.Stairwell.Trigger:Destroy()
+    workspace.Stairwell:GetChildren()[25]:Destroy()
 end)
 
--- Final Touch
+-- Remove Floor 2 Triggers
+createButton("Remove Floor 2 Triggers", function()
+    workspace.Floor2.Trigger:Destroy()
+    workspace.Floor2:GetChildren()[33]:Destroy()
+    workspace.Floor2:GetChildren()[32]:Destroy()
+end)
+
+-- Bypass Jason
+createButton("Bypass Jason", function()
+    workspace.Mansion.JasonTall3:Destroy()
+    workspace.CameraPos.JasonScare:Destroy()
+    workspace.Sounds.JasonScream:Destroy()
+    workspace.Mansion.JasonTall3.Head.JasonCry:Destroy()
+    ReplicatedStorage.Events.Scare:Destroy()
+end)
+
+------------------------------------------------------
+
 print("✅ The Intruder - Dis Manibus (By BMF) Script Loaded Successfully")
