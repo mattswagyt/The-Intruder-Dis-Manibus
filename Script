@@ -1,5 +1,5 @@
 -- The Intruder - Dis Manibus (By BMF)
--- Direct-destroy variant (no safety wrappers)
+-- Direct-destroy variant (no safety wrappers for destroys)
 
 -- Variables / Services
 local Players = game:GetService("Players")
