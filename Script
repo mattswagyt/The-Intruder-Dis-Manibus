@@ -191,6 +191,7 @@ local function performGodDestruction()
 
     -- HUD disable
     PlayerGui.Health.Frame.Visible = false
+    PlayerGui.Health.Frame.Active = false
     PlayerGui.Health.Heart.Visible = false
     PlayerGui.Health.Heart.Active = false
 end
