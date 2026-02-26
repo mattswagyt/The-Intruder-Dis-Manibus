@@ -160,6 +160,7 @@ end)
 
 -- Teleport buttons
 createButton("Skip Long Aah Stairs", function() teleportToVector3(Vector3.new(-63, 7, -46)) end)
+createButton("Train", function() teleportToVector3(Vector3.new(-99.8256912, 9.9521513, 229.561172, 1, 0, 0, 0, 1, 0, 0, 0, 1)) end)
 createButton("Main Room", function() teleportToVector3(Vector3.new(174, 4, 12)) end)
 createButton("Vent Room", function() teleportToVector3(Vector3.new(179, 4, -17)) end)
 createButton("Room 1", function() teleportToVector3(Vector3.new(196, 4, -71)) end)
