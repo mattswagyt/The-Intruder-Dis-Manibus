@@ -140,6 +140,43 @@ createButton("Dex Explorer", function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))()
 end)
 
+-- Shift to Run
+createButton("Shift to Run", function()
+	print("Shift to Run activated!")
+
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	local LocalPlayer = Players.LocalPlayer
+	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+	local humanoid = character:WaitForChild("Humanoid")
+
+	local normalSpeed = 8  -- Normal walking speed
+	local runSpeed = 16    -- Speed when holding Shift
+
+	-- Keep track of whether Shift is held
+	local shiftHeld = false
+
+	-- Detect key press
+	UIS.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		if input.KeyCode == Enum.KeyCode.LeftShift then
+			shiftHeld = true
+			humanoid.WalkSpeed = runSpeed
+		end
+	end)
+
+	-- Detect key release
+	UIS.InputEnded:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		if input.KeyCode == Enum.KeyCode.LeftShift then
+			shiftHeld = false
+			humanoid.WalkSpeed = normalSpeed
+		end
+	end)
+
+	print("Shift to Run is ready! Hold Shift to run.")
+end)
+
 createButton("Full Bright", function()
     safeDo(function()
         Lighting.Brightness = 5
@@ -160,6 +197,8 @@ end)
 
 -- Teleport buttons
 createButton("Skip Long Aah Stairs", function() teleportToVector3(Vector3.new(-63, 7, -46)) end)
+createButton("Elevator [Floor 1]", function() teleportToVector3(Vector3.new(-65, 7, 21)) end)
+createButton("Elevator [Floor 2]", function() teleportToVector3(Vector3.new(-102, 7, -55)) end)
 createButton("Train", function() teleportToVector3(Vector3.new(-99.8256912, 9.9521513, 229.561172, 1, 0, 0, 0, 1, 0, 0, 0, 1)) end)
 createButton("Main Room", function() teleportToVector3(Vector3.new(174, 4, 12)) end)
 createButton("Vent Room", function() teleportToVector3(Vector3.new(179, 4, -17)) end)
