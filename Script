@@ -178,7 +178,6 @@ local godLoopThread = nil
 local function performGodDestruction()
     workspace.WHITEBOXOFSHAME:Destroy()
     workspace.Sounds.Damage:Destroy()
-    workspace.Sounds.voices.HenryHurt:Destroy()
 
     ReplicatedStorage.Events.Die:Destroy()
     ReplicatedStorage.Events.ouch:Destroy()
