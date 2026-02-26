@@ -208,41 +208,92 @@ createButton("Interact (Hospital)", function() teleportToVector3(Vector3.new(210
 createButton("Elevator (Hospital)", function() teleportToVector3(Vector3.new(97, 4, -110)) end)
 
 ------------------------------------------------------
--- * UPDATED GOD MODE (ONLY destroys EXACT paths you listed)
+-- * UPDATED GOD MODE (Keeps isDead forced to false)
 ------------------------------------------------------
 
 local godModeEnabled = false
 local godLoopThread = nil
 
 local function performGodDestruction()
-    workspace.WHITEBOXOFSHAME:Destroy()
-    workspace.Sounds.Damage:Destroy()
 
-    ReplicatedStorage.Events.Die:Destroy()
-    ReplicatedStorage.Events.ouch:Destroy()
-    ReplicatedStorage.Events.takeDamage:Destroy()
-    ReplicatedStorage.Events.hasPlrDied:Destroy()
+    -- Destroy harmful objects safely
+    if workspace:FindFirstChild("WHITEBOXOFSHAME") then
+        workspace.WHITEBOXOFSHAME:Destroy()
+    end
 
-    Workspace[LocalPlayer.Name].Health:Destroy()
-    LocalPlayer.isDead:Destroy()
+    if workspace:FindFirstChild("Sounds") and workspace.Sounds:FindFirstChild("Damage") then
+        workspace.Sounds.Damage:Destroy()
+    end
+
+    if ReplicatedStorage:FindFirstChild("Events") then
+        local Events = ReplicatedStorage.Events
+
+        if Events:FindFirstChild("Die") then
+            Events.Die:Destroy()
+        end
+
+        if Events:FindFirstChild("ouch") then
+            Events.ouch:Destroy()
+        end
+
+        if Events:FindFirstChild("takeDamage") then
+            Events.takeDamage:Destroy()
+        end
+
+        if Events:FindFirstChild("hasPlrDied") then
+            Events.hasPlrDied:Destroy()
+        end
+    end
+
+    -- Instead of destroying Health, optionally force high value
+    if Workspace:FindFirstChild(LocalPlayer.Name)
+    and Workspace[LocalPlayer.Name]:FindFirstChild("Health") then
+
+        Workspace[LocalPlayer.Name].Health.Value = math.huge
+    end
+
+    -- FORCE isDead TO FALSE (THIS IS THE FIX)
+    if LocalPlayer:FindFirstChild("isDead") then
+        if LocalPlayer.isDead.Value ~= false then
+            LocalPlayer.isDead.Value = false
+        end
+    end
 
     -- HUD disable
-    PlayerGui.Health.Frame.Visible = false
-    PlayerGui.Health.Frame.Active = false
-    PlayerGui.Health.Heart.Visible = false
-    PlayerGui.Health.Heart.Active = false
+    if PlayerGui:FindFirstChild("Health") then
+        PlayerGui.Health.Frame.Visible = false
+        PlayerGui.Health.Frame.Active = false
+        PlayerGui.Health.Heart.Visible = false
+        PlayerGui.Health.Heart.Active = false
+    end
+
 end
 
+
 createButton("God Mode", function()
+
     godModeEnabled = not godModeEnabled
+
     if godModeEnabled then
+
         godLoopThread = task.spawn(function()
+
             while godModeEnabled do
+
                 performGodDestruction()
-                task.wait(0.35)
+
+                -- extra safety: force isDead false again
+                if LocalPlayer:FindFirstChild("isDead") then
+                    LocalPlayer.isDead.Value = false
+                end
+
+                task.wait(0.1) -- faster override, harder for server to win race
             end
+
         end)
+
     end
+
 end)
 
 ------------------------------------------------------
