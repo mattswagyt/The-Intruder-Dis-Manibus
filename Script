@@ -182,8 +182,6 @@ local function performGodDestruction()
     ReplicatedStorage.Events.Die:Destroy()
     ReplicatedStorage.Events.ouch:Destroy()
     ReplicatedStorage.Events.takeDamage:Destroy()
-    ReplicatedStorage.Events.taken:Destroy()
-    ReplicatedStorage.Events.thingKill:Destroy()
     ReplicatedStorage.Events.hasPlrDied:Destroy()
 
     Workspace[LocalPlayer.Name].Health:Destroy()
